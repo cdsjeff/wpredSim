@@ -1,4 +1,16 @@
+## v0.19
+- Added student-facing explanatory tooltips to buttons, input fields, mode controls, accordion headers, Live Performance measures, and Maximum Efficiency readouts.
+- Prediction candidate buttons remain tooltip-free.
+- Updated the visible version label to v0.19.
+
 # Updates
+
+
+## v0.17
+- Changed startup defaults to **Full expanded model** vocabulary.
+- Changed startup default for **Next-word prediction** to Off.
+- Changed startup default for **Phrase prediction** to Off.
+- Controls remain available so students can enable either prediction mode during experiments.
 
 ## v0.12
 - Added **Words predicted** percentage to Maximum Efficiency / Optimal Route.
@@ -53,3 +65,26 @@
 - Added **Predicted but typed** count.
 - Added **Prediction non-use rate** (% of completed target words that were available as predictions but were typed instead of selected).
 - Added this measure to Test History.
+
+
+## v0.17
+- Default Characters before completion changed to 0.
+
+
+## v0.17
+- Made Test-mode parsing and optimal-route prediction punctuation-aware for commas and terminal punctuation.
+- Removed prediction-button metadata line and enlarged/bolded number-row shortcut labels.
+
+
+## v0.17
+- Added physical `\` key as a pause/resume toggle.
+- WPM and elapsed time freeze while paused; paused duration is excluded after resuming.
+- Composition keys and prediction selections are disabled while paused.
+- The pause key is a control and is not inserted into the composed message.
+
+## v0.17
+- Test trials now end when the participant/instructor selects **Finish trial**, not when the typed response exactly matches the target.
+- The final response may contain unnoticed omissions, substitutions, spelling errors, or punctuation errors; timing and statistics freeze when Finish trial is selected.
+- Exact target matching no longer auto-terminates a Test trial.
+
+- v0.19: Added Predicted after typing count/rate to Live Performance and Test History; classification is based on the first time each target word appears in the prediction window.

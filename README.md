@@ -1,7 +1,14 @@
-# Word Predictor Simulator v0.12
+# Word Predictor Simulator v0.19
 
 Standalone browser-based teaching simulator for physical-keyboard word and phrase prediction.
 
+
+
+## What changed in v0.19
+- Default vocabulary scope is now **Full expanded model**.
+- **Next-word prediction** now starts **Off**.
+- **Phrase prediction** now starts **Off**.
+- All three settings remain adjustable during use.
 
 ## What changed in v0.12
 
@@ -63,3 +70,27 @@ In Test mode, the Target passage panel is editable. Paste a sentence or multi-se
 
 ### v0.11: Prediction uptake
 Test mode now reports **Predicted but typed** and **Prediction non-use rate**. A word is counted as predicted-but-typed when it appeared in the prediction window during its composition but was completed by ordinary typing rather than selecting a prediction. The non-use rate divides those words by completed target words that were available as predictions.
+
+
+### v0.19 punctuation and prediction-button changes
+- Commas and terminal punctuation are preserved in Test targets, counted as ordinary keyboard activations, and treated as lexical boundaries.
+- Target-aware prediction insertion no longer inserts a space before punctuation that the student must type.
+- Prediction buttons now use a single line: the number-row shortcut is bold and the same size as the prediction text; the second “word/phrase · number” line was removed.
+
+
+## Pause / resume
+Press the physical **\** (backslash) key to pause or resume a trial. While paused, elapsed time and WPM are frozen, composition and prediction selection are blocked, and paused time is excluded from the timing measures. The backslash character is not entered into the message.
+
+
+### Test trial completion
+A Test trial begins with the first composition action and ends only when **Finish trial** is selected. Exact agreement with the target is not required; errors can remain in the final response. At Finish trial, elapsed time, WPM, and all live statistics freeze and the trial is added to Test History.
+
+
+## v0.19 tooltips
+Explanatory hover/focus tooltips are embedded throughout the interface for controls, fields, live metrics, and optimal-route measures. Prediction candidate buttons are intentionally excluded.
+
+
+## v0.19 prediction timing measures
+- **Predicted after typing** counts completed target words whose first appearance in the prediction window occurred only after one or more letters of that word had been typed.
+- **Predicted after typing rate** = predicted-after-typing words divided by all completed target words that appeared in the prediction window at some point.
+- Words first offered before any letters are typed count as immediate predictions. Later words inside a phrase prediction also count as immediate because no letters of those words have yet been typed.

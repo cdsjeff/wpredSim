@@ -1,9 +1,10 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Word Predictor Simulator v0.12</title>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Word Predictor Simulator v0.16</title>
 <style>
   :root {
     --bg:#f4f6f8; --panel:#ffffff; --ink:#17202a; --muted:#627080;
@@ -57,11 +58,10 @@
   .compose:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,95,139,.12)}
   .hint{font-size:.82rem;color:var(--muted);margin-top:8px;line-height:1.4}
   .predgrid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-  .pred{position:relative;text-align:left;border:1px solid #bfd0dd;border-radius:11px;background:var(--accent2);padding:12px 12px 11px;min-height:62px;color:#173b53}
+  .pred{display:flex;align-items:center;gap:12px;text-align:left;border:1px solid #bfd0dd;border-radius:11px;background:var(--accent2);padding:12px;min-height:58px;color:#173b53}
   .pred:hover,.pred:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(31,95,139,.12)}
-  .pred .rank{position:absolute;top:6px;right:8px;font-size:.7rem;color:#6b7d8a}
-  .pred .txt{display:block;font-weight:750;padding-right:22px;line-height:1.25}
-  .pred .meta{display:block;margin-top:5px;font-size:.7rem;color:#6b7d8a}
+  .pred .rank{display:inline-block;flex:0 0 auto;font-size:1rem;font-weight:800;color:inherit;line-height:1.25}
+  .pred .txt{display:block;font-size:1rem;font-weight:750;line-height:1.25}
   .pred.phrase{background:#f1f4ff;border-color:#cbd2ee;color:#35416f}
   .emptyPred{padding:18px;border:1px dashed var(--line);border-radius:10px;text-align:center;color:var(--muted)}
   .controls{display:grid;gap:12px}
@@ -102,164 +102,156 @@
 </head>
 <body>
 <div class="app">
-  <div class="topbar">
-    <div class="brand">
-      <div class="inline"><h1>Word Predictor Simulator</h1><span class="version">v0.12 · local model</span></div>
-      <p>Physical QWERTY input · context-sensitive word and phrase prediction</p>
-    </div>
-    <button id="resetAll" class="btn danger" title="Reset the current composition and measures">Reset</button>
-  </div>
-
-  <div class="modebar" role="tablist" aria-label="Simulator mode">
-    <button class="modebtn active" data-mode="practice">Practice</button>
-    <button class="modebtn" data-mode="test">Test</button>
-    <button class="modebtn" data-mode="efficiency">Maximum Efficiency</button>
-  </div>
-
-  <div class="grid">
-    <main class="stack">
-      <section id="targetPanel" class="panel hidden">
-        <div class="panelhead"><h2 id="targetHeading">Target message</h2><span id="targetStatus" class="status"></span></div>
-        <div class="panelbody">
-          <div id="testTargetEditorWrap" class="hidden">
-            <div class="targetLabel">Target passage</div>
-            <textarea id="targetEditor" class="targetEditor" spellcheck="true" placeholder="Paste a target sentence or passage here…" aria-label="Target passage"></textarea>
-            <input id="targetFile" type="file" accept=".txt,.md,text/plain,text/markdown" class="hidden" />
-            <div id="testActions" class="targetActions">
-              <button id="applyTarget" class="btn primary">Use passage</button>
-              <button id="uploadTarget" class="btn">Upload text</button>
-              <button id="newTarget" class="btn">Sample target</button>
-              <button id="restartTrial" class="btn">Restart trial</button>
-            </div>
-            <div id="targetLoadStatus" class="status" style="margin-top:7px">Paste a passage above or upload a plain-text file, then use it as the test target.</div>
-            <div class="targetPreviewRow">
-              <div class="targetPreviewLabel">Test display</div>
-              <div class="visibilityToggles">
-                <label class="miniToggle" for="liveTargetToggle"><input id="liveTargetToggle" type="checkbox" checked> Live target progress</label>
-                <label class="miniToggle" for="testHistoryToggle"><input id="testHistoryToggle" type="checkbox"> Test history</label>
-              </div>
-            </div>
-          </div>
-          <div id="targetDisplay" class="targetText"></div>
-          <div id="effTargetWrap" class="hidden">
-            <input id="effTarget" class="textinput" style="width:100%;font-size:1rem" value="I would like to talk about what happened yesterday" aria-label="Efficiency target message" />
-          </div>
-        </div>
-      </section>
-
-
-      <section id="trialPanel" class="panel historyBlock hidden">
-        <div class="panelhead"><h2>Test history</h2><button id="clearHistory" class="btn">Clear</button></div>
-        <div class="panelbody" style="overflow:auto">
-          <table class="trialtable">
-            <thead><tr><th>Target</th><th>Activations</th><th>Pred.</th><th>KSR</th><th>WPM</th><th>Target available</th><th>Misses</th><th>Predicted but typed</th></tr></thead>
-            <tbody id="trialRows"><tr><td colspan="8" style="text-align:center;color:#7b8792">No completed trials yet.</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="composePanel" class="panel">
-        <div class="panelhead">
-          <h2>Composition</h2>
-          <span id="compositionStatus" class="status">Type with the physical keyboard</span>
-        </div>
-        <div class="panelbody">
-          <textarea id="compose" class="compose" autocomplete="off" autocapitalize="sentences" spellcheck="false" placeholder="Begin typing here…" aria-label="Composition area"></textarea>
-          <div class="hint">Predictions update after each character or completed word. Select a prediction by clicking it or with the number row: <span class="kbd">1–9, 0</span>. The simulator does not display an on-screen keyboard.</div>
-        </div>
-      </section>
-
-      <section id="predictPanel" class="panel">
-        <div class="panelhead">
-          <h2>Prediction window</h2>
-          <span id="contextReadout" class="status"></span>
-        </div>
-        <div class="panelbody">
-          <div id="predictions" class="predgrid" aria-live="polite"></div>
-        </div>
-      </section>
-
-      <section id="effPanel" class="panel hidden">
-        <div class="panelhead"><h2>Maximum-efficiency simulation</h2><span class="status">Optimal route using the current prediction settings</span></div>
-        <div class="panelbody effBox">
-          <div class="inline"><button id="runEfficiency" class="btn primary">Find optimal route</button><span id="effStatus" class="status"></span></div>
-          <div id="effResults" class="hidden">
-            <div class="effSummary">
-              <div class="metric"><div id="eBaseline" class="v">–</div><div class="l">Baseline keystrokes</div></div>
-              <div class="metric"><div id="eOptimal" class="v">–</div><div class="l">Minimum activations</div></div>
-              <div class="metric"><div id="eKsr" class="v">–</div><div class="l">Maximum KSR</div></div>
-              <div class="metric"><div id="eWordPred" class="v">–</div><div class="l">Words predicted</div></div>
-              <div class="metric"><div id="eTime" class="v">–</div><div class="l">Estimated time</div></div>
-            </div>
-            <div>
-              <div class="status" style="margin-bottom:6px">Optimal action sequence</div>
-              <div id="effActions" class="effActionList"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-    <aside class="stack rightAccordion" id="rightAccordion">
-      <section class="panel accordionPanel open" data-accordion="settings">
-        <div class="panelhead accordionHead" role="button" tabindex="0" aria-expanded="true"><h3>Prediction settings</h3><span class="accordionMeta"><span id="modelBadge" class="status"></span><span class="accordionChevron">›</span></span></div>
-        <div class="panelbody controls">
-          <div class="row"><label for="predCount">Prediction window<span class="sub">Number of visible candidates</span></label><div class="inline"><input id="predCount" type="range" min="3" max="10" step="1" value="5"><strong id="predCountVal">5</strong></div></div>
-          <div class="row"><label for="contextWords">Context look-back<span class="sub">Completed words used for contextual ranking</span></label><select id="contextWords"><option value="1">1 word</option><option value="2">2 words</option><option value="3" selected>3 words</option></select></div>
-          <div class="row"><label for="nextWordToggle">Next-word prediction<span class="sub">Show predictions at word boundaries and before typing the next word</span></label><div class="toggle"><input id="nextWordToggle" type="checkbox" checked></div></div>
-          <div class="row"><label for="phraseToggle">Phrase prediction<span class="sub">Mix multiword candidates with word candidates</span></label><div class="toggle"><input id="phraseToggle" type="checkbox" checked></div></div>
-          <div class="row"><label for="phraseLen">Maximum phrase length<span class="sub">Includes the first predicted word</span></label><select id="phraseLen"><option>2</option><option selected>3</option><option>4</option></select></div>
-          <div class="row"><label for="minPrefix">Characters before completion<span class="sub">Minimum typed prefix for within-word completion</span></label><select id="minPrefix"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
-          <div class="row"><label for="modelSize">Vocabulary scope<span class="sub">Ranked common-word vocabulary with conversational/AAC boosts; Full adds broad American-English coverage</span></label><select id="modelSize"><option value="500">500</option><option value="2000" selected>2,000</option><option value="10000">10,000</option><option value="all">Full expanded model</option></select></div>
-          <div class="divider"></div>
-          <div class="row"><label for="keyDelay">Keyboard activation delay<span class="sub">Used only in efficiency time estimates</span></label><div class="inline"><input id="keyDelay" type="number" min="50" max="3000" step="25" value="250" style="width:82px"><span class="status">ms</span></div></div>
-          <div class="row"><label for="predDelay">Prediction selection delay<span class="sub">Captures visual/cognitive + selection cost</span></label><div class="inline"><input id="predDelay" type="number" min="50" max="5000" step="25" value="650" style="width:82px"><span class="status">ms</span></div></div>
-          <details>
-            <summary>Model lab: add training text</summary>
-            <div class="detailbody">
-              <textarea id="trainingText" class="modelText" placeholder="Paste additional language samples here. The text remains in this browser session only."></textarea>
-              <div class="inline" style="margin-top:8px"><button id="trainBtn" class="btn">Add to model</button><button id="restoreModel" class="btn">Restore built-in model</button></div>
-              <div id="trainStatus" class="hint">The built-in model is trained locally when the page opens; no text is sent anywhere.</div>
-            </div>
-          </details>
-        </div>
-      </section>
-
-      <section class="panel accordionPanel" data-accordion="performance">
-        <div class="panelhead accordionHead" role="button" tabindex="0" aria-expanded="false"><h3>Live performance</h3><span class="accordionMeta"><span id="timerState" class="status">not started</span><span class="accordionChevron">›</span></span></div>
-        <div class="panelbody metrics">
-          <div class="metric"><div id="mChars" class="v">0</div><div class="l">Characters produced</div></div>
-          <div class="metric"><div id="mKeys" class="v">0</div><div class="l">Keyboard activations</div></div>
-          <div class="metric"><div id="mPred" class="v">0</div><div class="l">Prediction selections</div></div>
-          <div class="metric"><div id="mSaved" class="v">0</div><div class="l">Characters saved</div></div>
-          <div class="metric"><div id="mKsr" class="v">0%</div><div class="l">Keystroke savings rate</div></div>
-          <div class="metric"><div id="mWpm" class="v">0.0</div><div class="l">WPM (5-character words)</div></div>
-          <div class="metric"><div id="mOpp" class="v">0</div><div class="l">Prediction decision points</div></div>
-          <div class="metric"><div id="mAvail" class="v">0 / 0 · 0.0%</div><div class="l">Target available / decision points</div></div>
-          <div class="metric"><div id="mMisses" class="v">0</div><div class="l">Prediction misses</div></div>
-          <div class="metric"><div id="mMissRate" class="v">0.0%</div><div class="l">Miss rate</div></div>
-          <div class="metric"><div id="mEvaluated" class="v">0</div><div class="l">Target words evaluated</div></div>
-          <div class="metric"><div id="mPredTyped" class="v">0</div><div class="l">Predicted but typed</div></div>
-          <div class="metric"><div id="mNonUseRate" class="v">0.0%</div><div class="l">Prediction non-use rate</div></div>
-          <div class="metric wide">
-            <div class="row"><div><div id="mProgress" class="v">–</div><div class="l">Target progress / prediction rank</div></div><div style="min-width:120px"><div class="progressTrack"><div id="progressFill" class="progressFill"></div></div></div></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel accordionPanel" data-accordion="model">
-        <div class="panelhead accordionHead" role="button" tabindex="0" aria-expanded="false"><h3>Model description</h3><span class="accordionChevron">›</span></div>
-        <div class="panelbody" style="font-size:.82rem;line-height:1.5;color:#4d5a66">
-          <p style="margin-top:0"><strong>Local statistical model.</strong> Candidate words are ranked from a high-frequency lexical prior plus smoothed conditional probabilities derived from the previous 1, 2, and 3 completed words. Full vocabulary adds broad American-English dictionary coverage. When the longest context is sparse, the model backs off to shorter contexts while retaining a frequency prior so common short words remain competitive.</p>
-          <p><strong>Character updates.</strong> While a word is being typed, candidates are filtered by the current prefix and re-ranked using the same contextual probabilities. Next-word prediction can be switched off independently; prefix-based word completion remains available.</p>
-          <p><strong>Vocabulary coverage.</strong> Ranked scopes emphasize conversationally useful words; Full adds more than 60,000 additional American-English dictionary entries. Prefix completion searches the entire active scope. Multiword predictions require observed contextual transitions in the local n-gram corpus.</p>
-          <p style="margin-bottom:0"><strong>Phrase updates.</strong> Multiword candidates are generated by extending high-ranked next words through the model. Phrase suggestions therefore change with both the typed prefix and the preceding context.</p>
-        </div>
-      </section>
-    </aside>
-  </div>
-  <div class="foot">Prototype v0.12. Metrics are intended for teaching and simulation. “KSR” uses the current text length as the no-prediction character baseline and counts each physical key activation or prediction selection as one activation; correction keys therefore can produce negative KSR. Prediction misses are Test-mode target words completed without ever appearing in the prediction window during their composition; miss rate = misses ÷ target words evaluated. Predicted but typed counts completed target words that appeared in the prediction window but were completed by ordinary typing rather than prediction selection; prediction non-use rate = predicted-but-typed words ÷ completed target words that were available as predictions. Target availability is also shown as a decision-point percentage. Test targets can be pasted directly or loaded from plain-text .txt/.md files. Test statistics freeze when the target is completed. The three right-side panes use single-open accordion behavior. Live target progress and Test History can be shown or hidden independently, and the prediction window stays docked to the bottom of the viewport in Practice and Test modes.</div>
+<div class="topbar">
+<div class="brand">
+<div class="inline"><h1>Word Predictor Simulator</h1><span class="version">v0.19 · local model</span></div>
+<p>Physical QWERTY input · context-sensitive word and phrase prediction</p>
+</div>
+<button class="btn danger" id="resetAll" title="Reset the current composition, timing, predictions, and performance measures for the current mode.">Reset</button>
+</div>
+<div aria-label="Simulator mode" class="modebar" role="tablist">
+<button class="modebtn active" data-mode="practice" title="Practice free composition with the predictor. No target-based scoring is required.">Practice</button>
+<button class="modebtn" data-mode="test" title="Test composition against a target passage and collect target-based prediction and performance measures.">Test</button>
+<button class="modebtn" data-mode="efficiency" title="Calculate the theoretical best route for a target passage using the current prediction settings.">Maximum Efficiency</button>
+</div>
+<div class="grid">
+<main class="stack">
+<section class="panel hidden" id="targetPanel">
+<div class="panelhead"><h2 id="targetHeading">Target message</h2><span class="status" id="targetStatus" title="Shows the current target/trial status."></span></div>
+<div class="panelbody">
+<div class="hidden" id="testTargetEditorWrap">
+<div class="targetLabel">Target passage</div>
+<textarea aria-label="Target passage" class="targetEditor" id="targetEditor" placeholder="Paste a target sentence or passage here…" spellcheck="true" title="Paste or edit the passage the student is expected to type in Test mode. Punctuation is part of the target."></textarea>
+<input accept=".txt,.md,text/plain,text/markdown" class="hidden" id="targetFile" title="Choose a plain-text .txt or .md file to load as the Test-mode target passage." type="file"/>
+<div class="targetActions" id="testActions">
+<button class="btn primary" id="applyTarget" title="Use the text in the Target passage box as the active Test-mode target and prepare a new trial.">Use passage</button>
+<button class="btn" id="uploadTarget" title="Load a plain-text .txt or .md file into the Target passage box and use it as the test target.">Upload text</button>
+<button class="btn" id="newTarget" title="Load a built-in sample passage as the Test-mode target.">Sample target</button>
+<button class="btn" id="restartTrial" title="Reset the current Test trial to zero while keeping the same target passage. Timing will begin with the first composition action.">Restart trial</button>
+<button class="btn primary" id="finishTrial" title="End the Test trial as typed, even if errors remain. Timing, WPM, and live statistics will freeze and the result will be recorded.">Finish trial</button>
+</div>
+<div class="status" id="targetLoadStatus" style="margin-top:7px" title="Shows instructions or confirmation after a target passage is pasted, uploaded, or applied.">Paste a passage above or upload a plain-text file, then use it as the test target.</div>
+<div class="targetPreviewRow">
+<div class="targetPreviewLabel">Test display</div>
+<div class="visibilityToggles">
+<label class="miniToggle" for="liveTargetToggle" title="Show or hide the live comparison between the student’s composition and the target passage. Hiding it does not change scoring."><input checked="" id="liveTargetToggle" title="Show or hide the live comparison between the student’s composition and the target passage. Hiding it does not change scoring." type="checkbox"/> Live target progress</label>
+<label class="miniToggle" for="testHistoryToggle" title="Show or hide the Test History table. Trial results continue to be recorded while the table is hidden."><input id="testHistoryToggle" title="Show or hide the Test History table. Trial results continue to be recorded while the table is hidden." type="checkbox"/> Test history</label>
+</div>
+</div>
+</div>
+<div class="targetText" id="targetDisplay" title="Displays the active target passage and, when enabled, live target progress during Test mode."></div>
+<div class="hidden" id="effTargetWrap">
+<input aria-label="Efficiency target message" class="textinput" id="effTarget" style="width:100%;font-size:1rem" title="Enter the passage for the Maximum Efficiency simulation. The model will search for the lowest-activation route using current prediction settings." value="I would like to talk about what happened yesterday">
+</input></div>
+</div>
+</section>
+<section class="panel historyBlock hidden" id="trialPanel" title="Stores summary results from finished Test trials in the current browser session.">
+<div class="panelhead"><h2>Test history</h2><button class="btn" id="clearHistory" title="Remove all recorded Test History rows from the current browser session.">Clear</button></div>
+<div class="panelbody" style="overflow:auto">
+<table class="trialtable">
+<thead><tr><th>Target</th><th>Activations</th><th>Pred.</th><th>KSR</th><th>WPM</th><th>Target available</th><th>Misses</th><th>Predicted after typing</th><th>Predicted but typed</th></tr></thead>
+<tbody id="trialRows"><tr><td colspan="8" style="text-align:center;color:#7b8792">No completed trials yet.</td></tr></tbody>
+</table>
+</div>
+</section>
+<section class="panel" id="composePanel">
+<div class="panelhead">
+<h2>Composition</h2>
+<span class="status" id="compositionStatus" title="Shows composition instructions and trial-state messages.">Type with the physical keyboard</span>
+</div>
+<div class="panelbody">
+<textarea aria-label="Composition area" autocapitalize="sentences" autocomplete="off" class="compose" id="compose" placeholder="Begin typing here…" spellcheck="false" title="Type the message here with the physical keyboard. In Test mode, timing starts with the first composition action; backslash (\) pauses or resumes the trial."></textarea>
+<div class="hint">Predictions update after each character or completed word. Select a prediction by clicking it or with the number row: <span class="kbd">1–9, 0</span>. The simulator does not display an on-screen keyboard.</div>
+</div>
+</section>
+<section class="panel" id="predictPanel">
+<div class="panelhead" title="Prediction candidates appear here. Use the physical number row 1–9 and 0 to select positions 1–10.">
+<h2>Prediction window</h2>
+<span class="status" id="contextReadout" title="Shows the context currently being used to generate and rank prediction candidates."></span>
+</div>
+<div class="panelbody">
+<div aria-live="polite" class="predgrid" id="predictions"></div>
+</div>
+</section>
+<section class="panel hidden" id="effPanel">
+<div class="panelhead"><h2>Maximum-efficiency simulation</h2><span class="status">Optimal route using the current prediction settings</span></div>
+<div class="panelbody effBox">
+<div class="inline"><button class="btn primary" id="runEfficiency" title="Calculate the theoretically optimal route for the efficiency target using the current prediction settings and selection-delay assumptions.">Find optimal route</button><span class="status" id="effStatus" title="Shows the status and summary of the Maximum Efficiency calculation."></span></div>
+<div class="hidden" id="effResults">
+<div class="effSummary">
+<div class="metric" tabindex="0" title="Number of character-level activations needed to type the efficiency target without using prediction."><div class="v" id="eBaseline" title="Number of character-level activations needed to type the efficiency target without using prediction.">–</div><div class="l">Baseline keystrokes</div></div>
+<div class="metric" tabindex="0" title="Smallest number of physical activations found for producing the efficiency target using the current predictor."><div class="v" id="eOptimal" title="Smallest number of physical activations found for producing the efficiency target using the current predictor.">–</div><div class="l">Minimum activations</div></div>
+<div class="metric" tabindex="0" title="Maximum theoretical Keystroke Savings Rate for the efficiency target under the current settings."><div class="v" id="eKsr" title="Maximum theoretical Keystroke Savings Rate for the efficiency target under the current settings.">–</div><div class="l">Maximum KSR</div></div>
+<div class="metric" tabindex="0" title="Percentage of target words that the optimal route completes through prediction. Words supplied inside selected phrases also count as predicted."><div class="v" id="eWordPred" title="Percentage of target words that the optimal route completes through prediction. Words supplied inside selected phrases also count as predicted.">–</div><div class="l">Words predicted</div></div>
+<div class="metric" tabindex="0" title="Estimated time for the optimal route using the Keyboard activation delay and Prediction selection delay settings."><div class="v" id="eTime" title="Estimated time for the optimal route using the Keyboard activation delay and Prediction selection delay settings.">–</div><div class="l">Estimated time</div></div>
+</div>
+<div>
+<div class="status" style="margin-bottom:6px">Optimal action sequence</div>
+<div class="effActionList" id="effActions" tabindex="0" title="Step-by-step sequence of ordinary typing and prediction selections used by the calculated optimal route."></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<aside class="stack rightAccordion" id="rightAccordion">
+<section class="panel accordionPanel open" data-accordion="settings">
+<div aria-expanded="true" class="panelhead accordionHead" role="button" tabindex="0" title="Open Prediction Settings. Opening this pane closes the other right-side panes."><h3>Prediction settings</h3><span class="accordionMeta"><span class="status" id="modelBadge" title="Summarizes the currently active vocabulary/model scope."></span><span class="accordionChevron">›</span></span></div>
+<div class="panelbody controls">
+<div class="row"><label for="predCount" title="Set how many prediction candidates are visible at once, from 3 to 10. More items may improve coverage but increase visual search.">Prediction window<span class="sub">Number of visible candidates</span></label><div class="inline"><input id="predCount" max="10" min="3" step="1" title="Set how many prediction candidates are visible at once, from 3 to 10. More items may improve coverage but increase visual search." type="range" value="5"/><strong id="predCountVal">5</strong></div></div>
+<div class="row"><label for="contextWords" title="Set how many completed words, up to three, are used as context for ranking the next prediction. Sparse longer contexts back off to shorter contexts.">Context look-back<span class="sub">Completed words used for contextual ranking</span></label><select id="contextWords" title="Set how many completed words, up to three, are used as context for ranking the next prediction. Sparse longer contexts back off to shorter contexts."><option value="1">1 word</option><option value="2">2 words</option><option selected="" value="3">3 words</option></select></div>
+<div class="row"><label for="nextWordToggle" title="When on, show predictions before any letters of the next word are typed. When off, predictions begin with prefix-based word completion.">Next-word prediction<span class="sub">Show predictions at word boundaries and before typing the next word</span></label><div class="toggle"><input id="nextWordToggle" title="When on, show predictions before any letters of the next word are typed. When off, predictions begin with prefix-based word completion." type="checkbox"/></div></div>
+<div class="row"><label for="phraseToggle" title="When on, allow multiword phrase predictions to share the prediction window with single-word candidates.">Phrase prediction<span class="sub">Mix multiword candidates with word candidates</span></label><div class="toggle"><input id="phraseToggle" title="When on, allow multiword phrase predictions to share the prediction window with single-word candidates." type="checkbox"/></div></div>
+<div class="row"><label for="phraseLen" title="Set the maximum number of words allowed in a phrase prediction.">Maximum phrase length<span class="sub">Includes the first predicted word</span></label><select id="phraseLen" title="Set the maximum number of words allowed in a phrase prediction."><option>2</option><option selected="">3</option><option>4</option></select></div>
+<div class="row"><label for="minPrefix" title="Set the minimum number of typed characters required before within-word completion is offered. A value of 0 allows completion immediately.">Characters before completion<span class="sub">Minimum typed prefix for within-word completion</span></label><select id="minPrefix" title="Set the minimum number of typed characters required before within-word completion is offered. A value of 0 allows completion immediately."><option selected="" value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+<div class="row"><label for="modelSize" title="Choose the active vocabulary size. Smaller scopes emphasize common words; Full uses the expanded vocabulary for maximum lexical coverage.">Vocabulary scope<span class="sub">Ranked common-word vocabulary with conversational/AAC boosts; Full adds broad American-English coverage</span></label><select id="modelSize" title="Choose the active vocabulary size. Smaller scopes emphasize common words; Full uses the expanded vocabulary for maximum lexical coverage."><option value="500">500</option><option value="2000">2,000</option><option value="10000">10,000</option><option selected="" value="all">Full expanded model</option></select></div>
+<div class="divider"></div>
+<div class="row"><label for="keyDelay" title="Assumed milliseconds for one ordinary keyboard activation in Maximum Efficiency time estimates. This does not slow actual typing.">Keyboard activation delay<span class="sub">Used only in efficiency time estimates</span></label><div class="inline"><input id="keyDelay" max="3000" min="50" step="25" style="width:82px" title="Assumed milliseconds for one ordinary keyboard activation in Maximum Efficiency time estimates. This does not slow actual typing." type="number" value="250"/><span class="status">ms</span></div></div>
+<div class="row"><label for="predDelay" title="Assumed milliseconds for one prediction selection in Maximum Efficiency time estimates, including visual search, decision, and selection cost.">Prediction selection delay<span class="sub">Captures visual/cognitive + selection cost</span></label><div class="inline"><input id="predDelay" max="5000" min="50" step="25" style="width:82px" title="Assumed milliseconds for one prediction selection in Maximum Efficiency time estimates, including visual search, decision, and selection cost." type="number" value="650"/><span class="status">ms</span></div></div>
+<details>
+<summary title="Open the Model Lab to add temporary training text and demonstrate model adaptation.">Model lab: add training text</summary>
+<div class="detailbody">
+<textarea class="modelText" id="trainingText" placeholder="Paste additional language samples here. The text remains in this browser session only." title="Paste language samples here to adapt the local model for this browser session. Added text changes word and sequence frequencies."></textarea>
+<div class="inline" style="margin-top:8px"><button class="btn" id="trainBtn" title="Add the Model Lab text to the local prediction model for this browser session.">Add to model</button><button class="btn" id="restoreModel" title="Discard Model Lab additions and restore the built-in local prediction model.">Restore built-in model</button></div>
+<div class="hint" id="trainStatus" title="Shows whether the built-in model or an adapted Model Lab version is currently active.">The built-in model is trained locally when the page opens; no text is sent anywhere.</div>
+</div>
+</details>
+</div>
+</section>
+<section class="panel accordionPanel" data-accordion="performance">
+<div aria-expanded="false" class="panelhead accordionHead" role="button" tabindex="0" title="Open Live Performance measures. Opening this pane closes the other right-side panes."><h3>Live performance</h3><span class="accordionMeta"><span class="status" id="timerState" title="Shows whether timing has not started, is running, is paused, or is finished.">not started</span><span class="accordionChevron">›</span></span></div>
+<div class="panelbody metrics">
+<div class="metric" tabindex="0" title="Number of characters currently produced in the composition, including spaces and punctuation."><div class="v" id="mChars" title="Number of characters currently produced in the composition, including spaces and punctuation.">0</div><div class="l">Characters produced</div></div>
+<div class="metric" tabindex="0" title="Number of ordinary physical keyboard activations made during composition. Prediction selections are counted separately."><div class="v" id="mKeys" title="Number of ordinary physical keyboard activations made during composition. Prediction selections are counted separately.">0</div><div class="l">Keyboard activations</div></div>
+<div class="metric" tabindex="0" title="Number of prediction-window items actually selected by the user."><div class="v" id="mPred" title="Number of prediction-window items actually selected by the user.">0</div><div class="l">Prediction selections</div></div>
+<div class="metric" tabindex="0" title="Estimated character-level activations avoided by predictions that were selected."><div class="v" id="mSaved" title="Estimated character-level activations avoided by predictions that were selected.">0</div><div class="l">Characters saved</div></div>
+<div class="metric" tabindex="0" title="Keystroke Savings Rate: reduction in physical activations relative to producing the current text character by character."><div class="v" id="mKsr" title="Keystroke Savings Rate: reduction in physical activations relative to producing the current text character by character.">0%</div><div class="l">Keystroke savings rate</div></div>
+<div class="metric" tabindex="0" title="Words per minute using the standard five-character word convention. Paused intervals are excluded and the value freezes when a Test trial is finished."><div class="v" id="mWpm" title="Words per minute using the standard five-character word convention. Paused intervals are excluded and the value freezes when a Test trial is finished.">0.0</div><div class="l">WPM (5-character words)</div></div>
+<div class="metric" tabindex="0" title="Number of prediction decision points evaluated during Test-mode composition."><div class="v" id="mOpp" title="Number of prediction decision points evaluated during Test-mode composition.">0</div><div class="l">Prediction decision points</div></div>
+<div class="metric" tabindex="0" title="Number and percentage of decision points at which an appropriate continuation of the target was visible in the prediction window."><div class="v" id="mAvail" title="Number and percentage of decision points at which an appropriate continuation of the target was visible in the prediction window.">0 / 0 · 0.0%</div><div class="l">Target available / decision points</div></div>
+<div class="metric" tabindex="0" title="Number of completed target words that never appeared as an appropriate prediction while that word was being composed."><div class="v" id="mMisses" title="Number of completed target words that never appeared as an appropriate prediction while that word was being composed.">0</div><div class="l">Prediction misses</div></div>
+<div class="metric" tabindex="0" title="Prediction misses divided by target words evaluated, expressed as a percentage."><div class="v" id="mMissRate" title="Prediction misses divided by target words evaluated, expressed as a percentage.">0.0%</div><div class="l">Miss rate</div></div>
+<div class="metric" tabindex="0" title="Number of completed target words that have enough information to be classified as predicted/available or missed."><div class="v" id="mEvaluated" title="Number of completed target words that have enough information to be classified as predicted/available or missed.">0</div><div class="l">Target words evaluated</div></div>
+<div class="metric" tabindex="0" title="Number of target words that first appeared in the prediction window only after one or more letters of that word had already been typed."><div class="v" id="mPredAfterTyping" title="Number of target words that first appeared in the prediction window only after one or more letters of that word had already been typed.">0</div><div class="l">Predicted after typing</div></div>
+<div class="metric" tabindex="0" title="Predicted-after-typing words divided by all completed target words that appeared in the prediction window at some point."><div class="v" id="mPredAfterTypingRate" title="Predicted-after-typing words divided by all completed target words that appeared in the prediction window at some point.">0.0%</div><div class="l">Predicted after typing rate</div></div>
+<div class="metric" tabindex="0" title="Number of target words that appeared in the prediction window but were completed by ordinary typing instead of prediction selection."><div class="v" id="mPredTyped" title="Number of target words that appeared in the prediction window but were completed by ordinary typing instead of prediction selection.">0</div><div class="l">Predicted but typed</div></div>
+<div class="metric" tabindex="0" title="Predicted-but-typed words divided by completed target words that were available as predictions, expressed as a percentage."><div class="v" id="mNonUseRate" title="Predicted-but-typed words divided by completed target words that were available as predictions, expressed as a percentage.">0.0%</div><div class="l">Prediction non-use rate</div></div>
+<div class="metric wide" tabindex="0" title="Shows target progress and the mean rank of correct predictions when they were available. Lower prediction rank is better.">
+<div class="row"><div><div class="v" id="mProgress" title="Shows target progress and the mean rank of correct predictions when they were available. Lower prediction rank is better.">–</div><div class="l">Target progress / prediction rank</div></div><div style="min-width:120px"><div class="progressTrack"><div class="progressFill" id="progressFill" title="Visual bar showing progress through the target passage in Test mode."></div></div></div></div>
+</div>
+</div>
+</section>
+<section class="panel accordionPanel" data-accordion="model">
+<div aria-expanded="false" class="panelhead accordionHead" role="button" tabindex="0" title="Open the Model Description. Opening this pane closes the other right-side panes."><h3>Model description</h3><span class="accordionChevron">›</span></div>
+<div class="panelbody" style="font-size:.82rem;line-height:1.5;color:#4d5a66">
+<p style="margin-top:0"><strong>Local statistical model.</strong> Candidate words are ranked from a high-frequency lexical prior plus smoothed conditional probabilities derived from the previous 1, 2, and 3 completed words. Full vocabulary adds broad American-English dictionary coverage. When the longest context is sparse, the model backs off to shorter contexts while retaining a frequency prior so common short words remain competitive.</p>
+<p><strong>Character updates.</strong> While a word is being typed, candidates are filtered by the current prefix and re-ranked using the same contextual probabilities. Next-word prediction can be switched off independently; prefix-based word completion remains available.</p>
+<p><strong>Vocabulary coverage.</strong> Ranked scopes emphasize conversationally useful words; Full adds more than 60,000 additional American-English dictionary entries. Prefix completion searches the entire active scope. Multiword predictions require observed contextual transitions in the local n-gram corpus.</p>
+<p style="margin-bottom:0"><strong>Phrase updates.</strong> Multiword candidates are generated by extending high-ranked next words through the model. Phrase suggestions therefore change with both the typed prefix and the preceding context.</p>
+</div>
+</section>
+</aside>
+</div>
+<div class="foot">Prototype v0.18. Typed commas and terminal punctuation are preserved as target characters, counted as ordinary keyboard activations, and treated as lexical boundaries for prediction. Metrics are intended for teaching and simulation. “KSR” uses the current text length as the no-prediction character baseline and counts each physical key activation or prediction selection as one activation; correction keys therefore can produce negative KSR. Prediction misses are Test-mode target words completed without ever appearing in the prediction window during their composition; miss rate = misses ÷ target words evaluated. Predicted after typing counts completed target words whose first appearance in the prediction window occurred only after one or more letters of that word had been typed; predicted-after-typing rate = those words ÷ completed target words that appeared in the prediction window at some point. Predicted but typed counts completed target words that appeared in the prediction window but were completed by ordinary typing rather than prediction selection; prediction non-use rate = predicted-but-typed words ÷ completed target words that were available as predictions. Target availability is also shown as a decision-point percentage. Test targets can be pasted directly or loaded from plain-text .txt/.md files. Test statistics freeze when the participant explicitly finishes the trial; an exact target match is not required, so unnoticed errors remain in the final response. The three right-side panes use single-open accordion behavior. Live target progress and Test History can be shown or hidden independently, and the prediction window stays docked to the bottom of the viewport in Practice and Test modes.</div>
 </div>
 <script>
 (() => {
@@ -371,11 +363,11 @@ const els = {
   keyDelay:$('keyDelay'), predDelay:$('predDelay'), contextReadout:$('contextReadout'), modelBadge:$('modelBadge'),
   targetPanel:$('targetPanel'), targetDisplay:$('targetDisplay'), targetStatus:$('targetStatus'), targetHeading:$('targetHeading'), liveTargetToggle:$('liveTargetToggle'), testHistoryToggle:$('testHistoryToggle'),
   testTargetEditorWrap:$('testTargetEditorWrap'), targetEditor:$('targetEditor'), targetFile:$('targetFile'), targetLoadStatus:$('targetLoadStatus'),
-  testActions:$('testActions'), applyTarget:$('applyTarget'), uploadTarget:$('uploadTarget'), newTarget:$('newTarget'), restartTrial:$('restartTrial'), effTargetWrap:$('effTargetWrap'), effTarget:$('effTarget'),
+  testActions:$('testActions'), applyTarget:$('applyTarget'), uploadTarget:$('uploadTarget'), newTarget:$('newTarget'), restartTrial:$('restartTrial'), finishTrial:$('finishTrial'), effTargetWrap:$('effTargetWrap'), effTarget:$('effTarget'),
   composePanel:$('composePanel'), predictPanel:$('predictPanel'), effPanel:$('effPanel'), trialPanel:$('trialPanel'),
   runEfficiency:$('runEfficiency'), effStatus:$('effStatus'), effResults:$('effResults'), effActions:$('effActions'),
   eBaseline:$('eBaseline'), eOptimal:$('eOptimal'), eKsr:$('eKsr'), eWordPred:$('eWordPred'), eTime:$('eTime'),
-  mChars:$('mChars'), mKeys:$('mKeys'), mPred:$('mPred'), mSaved:$('mSaved'), mKsr:$('mKsr'), mWpm:$('mWpm'), mOpp:$('mOpp'), mAvail:$('mAvail'), mMisses:$('mMisses'), mMissRate:$('mMissRate'), mEvaluated:$('mEvaluated'), mPredTyped:$('mPredTyped'), mNonUseRate:$('mNonUseRate'), mProgress:$('mProgress'), progressFill:$('progressFill'),
+  mChars:$('mChars'), mKeys:$('mKeys'), mPred:$('mPred'), mSaved:$('mSaved'), mKsr:$('mKsr'), mWpm:$('mWpm'), mOpp:$('mOpp'), mAvail:$('mAvail'), mMisses:$('mMisses'), mMissRate:$('mMissRate'), mEvaluated:$('mEvaluated'), mPredAfterTyping:$('mPredAfterTyping'), mPredAfterTypingRate:$('mPredAfterTypingRate'), mPredTyped:$('mPredTyped'), mNonUseRate:$('mNonUseRate'), mProgress:$('mProgress'), progressFill:$('progressFill'),
   timerState:$('timerState'), compositionStatus:$('compositionStatus'), trialRows:$('trialRows'), clearHistory:$('clearHistory'),
   trainingText:$('trainingText'), trainBtn:$('trainBtn'), restoreModel:$('restoreModel'), trainStatus:$('trainStatus'), resetAll:$('resetAll'), rightAccordion:$('rightAccordion')
 };
@@ -394,9 +386,9 @@ let timerTick=null;
 function freshMetrics(){
   return {
     keys:0,predSelections:0,predInserted:0,saved:0,decisionPoints:0,targetAvailable:0,targetRanks:[],
-    targetWordSeen:new Set(),targetWordsEvaluated:new Set(),targetWordMisses:new Set(),
-    targetWordsSelected:new Set(),targetWordsPredictedButTyped:new Set(),
-    start:0,end:0,completed:false
+    targetWordSeen:new Set(),targetWordFirstSeenChars:new Map(),targetWordsEvaluated:new Set(),targetWordMisses:new Set(),
+    targetWordsSelected:new Set(),targetWordsPredictedAfterTyping:new Set(),targetWordsPredictedButTyped:new Set(),
+    start:0,end:0,completed:false,paused:false,pauseStarted:0,totalPaused:0
   };
 }
 
@@ -458,11 +450,16 @@ function wordAllowed(w,limit=scopeLimit()){
 }
 
 function splitInput(text){
+  // Whitespace and typed punctuation both close the current lexical word. This lets
+  // students type commas and terminal punctuation without the predictor continuing
+  // to treat the preceding word as an unfinished prefix.
   const endsSpace=/\s$/.test(text);
+  const endsPunctuation=/[.,!?;:]$/.test(text);
+  const atBoundary=endsSpace||endsPunctuation;
   const toks=tokenize(text);
   let prefix=''; let complete=toks;
-  if(!endsSpace && toks.length){ prefix=toks[toks.length-1]; complete=toks.slice(0,-1); }
-  return {prefix,complete,endsSpace};
+  if(!atBoundary && toks.length){ prefix=toks[toks.length-1]; complete=toks.slice(0,-1); }
+  return {prefix,complete,endsSpace,endsPunctuation,atBoundary};
 }
 
 function distTotal(m){ let x=0; for(const v of m.values())x+=v; return x||1; }
@@ -576,9 +573,35 @@ function applyPrediction(text,pred,target=null){
   const base=text.slice(0,start);
   let insert=capitalizeLike(base,pred.text);
   let candidate=base+insert;
-  if(target && normalizeText(candidate)===normalizeText(target)) return candidate;
+  if(target){
+    // Preserve punctuation in the target. If the predicted word/phrase ends
+    // immediately before a comma or terminal mark, do not insert a space; the
+    // student still types that punctuation as an ordinary keyboard activation.
+    if(target.toLowerCase().startsWith(candidate.toLowerCase())){
+      const next=target.charAt(candidate.length);
+      if(!next) return candidate;
+      if(/\s/.test(next)){ if(!/\s$/.test(candidate)) candidate+=' '; return candidate; }
+      if(/[.,!?;:]/.test(next)) return candidate;
+    }
+    if(normalizeText(candidate)===normalizeText(target)) return candidate;
+  }
   if(candidate && !/\s$/.test(candidate)) candidate+=' ';
   return candidate;
+}
+
+function currentTypedPrefixLength(){
+  if(mode!=='test') return 0;
+  const raw=els.compose.value;
+  if(!raw || /[\s.,!?;:]$/.test(raw)) return 0;
+  const m=raw.match(/([A-Za-z]+(?:'[A-Za-z]+)?)$/);
+  return m ? m[1].length : 0;
+}
+
+function recordPredictionWordSeen(wordIndex, charsAlreadyTyped){
+  metrics.targetWordSeen.add(wordIndex);
+  if(!metrics.targetWordFirstSeenChars.has(wordIndex)){
+    metrics.targetWordFirstSeenChars.set(wordIndex, Math.max(0, charsAlreadyTyped||0));
+  }
 }
 
 function markPredictionCoverage(pred){
@@ -587,8 +610,9 @@ function markPredictionCoverage(pred){
   if(wi<0) return;
   const targetWords=tokenize(currentTarget);
   const predWords=tokenize(pred.text);
+  const currentPrefixLen=currentTypedPrefixLength();
   for(let j=0;j<predWords.length && wi+j<targetWords.length;j++){
-    if(predWords[j]===targetWords[wi+j]) metrics.targetWordSeen.add(wi+j);
+    if(predWords[j]===targetWords[wi+j]) recordPredictionWordSeen(wi+j, j===0 ? currentPrefixLen : 0);
     else break;
   }
 }
@@ -599,9 +623,10 @@ function markPredictionSelection(pred){
   if(wi<0) return;
   const targetWords=tokenize(currentTarget);
   const predWords=tokenize(pred.text);
+  const currentPrefixLen=currentTypedPrefixLength();
   for(let j=0;j<predWords.length && wi+j<targetWords.length;j++){
     if(predWords[j]===targetWords[wi+j]){
-      metrics.targetWordSeen.add(wi+j);
+      recordPredictionWordSeen(wi+j, j===0 ? currentPrefixLen : 0);
       metrics.targetWordsSelected.add(wi+j);
     } else break;
   }
@@ -610,7 +635,7 @@ function markPredictionSelection(pred){
 function renderPredictions(countOpportunity=false){
   if(mode==='test' && metrics && metrics.completed){
     currentPredictions=[];
-    els.predictions.innerHTML='<div class="emptyPred">Target complete. Restart the trial or load a new target to continue.</div>';
+    els.predictions.innerHTML='<div class="emptyPred">Trial finished. Restart the trial or load a new target to continue.</div>';
     updateContextReadout();
     updateMetrics();
     requestAnimationFrame(positionPredictionDock);
@@ -622,22 +647,26 @@ function renderPredictions(countOpportunity=false){
   else currentPredictions.forEach((p,i)=>{
     const b=document.createElement('button'); b.className='pred '+(p.type==='phrase'?'phrase':''); b.type='button';
     const shortcut=i===9?'0':String(i+1);
-    b.innerHTML=`<span class="rank">${shortcut}</span><span class="txt">${escapeHtml(displayPrediction(p.text))}</span><span class="meta">${p.type==='phrase'?'phrase':'word'} · ${shortcut}</span>`;
+    b.innerHTML=`<span class="rank">${shortcut}</span><span class="txt">${escapeHtml(displayPrediction(p.text))}</span>`;
     b.addEventListener('click',()=>selectPrediction(i)); els.predictions.appendChild(b);
   });
   updateContextReadout();
-  if(countOpportunity && mode==='test' && currentTarget && !metrics.completed){
-    metrics.decisionPoints++;
+  if(mode==='test' && currentTarget && !metrics.completed){
     const current=normalizeText(els.compose.value);
     let rank=0;
     currentPredictions.forEach((p,i)=>{
       const n=normalizeText(applyPrediction(els.compose.value,p,currentTarget));
       if(currentTarget.toLowerCase().startsWith(n.toLowerCase()) && n.length>current.length){
         if(!rank) rank=i+1;
+        // Record when the target word first becomes visible even on the initial,
+        // pre-typing prediction window. Decision-point counts remain tied to actions.
         markPredictionCoverage(p);
       }
     });
-    if(rank){ metrics.targetAvailable++; metrics.targetRanks.push(rank); }
+    if(countOpportunity){
+      metrics.decisionPoints++;
+      if(rank){ metrics.targetAvailable++; metrics.targetRanks.push(rank); }
+    }
   }
   updateMetrics();
   requestAnimationFrame(positionPredictionDock);
@@ -648,7 +677,7 @@ function currentTargetWordIndex(){
   const raw=els.compose.value;
   const toks=tokenize(raw);
   if(!toks.length) return 0;
-  return /\s$/.test(raw) ? toks.length : Math.max(0,toks.length-1);
+  return /[\s.,!?;:]$/.test(raw) ? toks.length : Math.max(0,toks.length-1);
 }
 
 function markCompletedTargetWords(){
@@ -656,14 +685,17 @@ function markCompletedTargetWords(){
   const targetWords=tokenize(currentTarget);
   const typedWords=tokenize(els.compose.value);
   const exactComplete=normalizeText(els.compose.value).toLowerCase()===normalizeText(currentTarget).toLowerCase();
-  let completedCount=exactComplete ? targetWords.length : (/\s$/.test(els.compose.value) ? typedWords.length : Math.max(0,typedWords.length-1));
+  let completedCount=exactComplete ? targetWords.length : (/[\s.,!?;:]$/.test(els.compose.value) ? typedWords.length : Math.max(0,typedWords.length-1));
   completedCount=Math.min(completedCount,targetWords.length);
   for(let i=0;i<completedCount;i++){
     if((typedWords[i]||'').toLowerCase()!==targetWords[i]) break;
     if(!metrics.targetWordsEvaluated.has(i)){
       metrics.targetWordsEvaluated.add(i);
       if(!metrics.targetWordSeen.has(i)) metrics.targetWordMisses.add(i);
-      else if(!metrics.targetWordsSelected.has(i)) metrics.targetWordsPredictedButTyped.add(i);
+      else {
+        if((metrics.targetWordFirstSeenChars.get(i)||0)>0) metrics.targetWordsPredictedAfterTyping.add(i);
+        if(!metrics.targetWordsSelected.has(i)) metrics.targetWordsPredictedButTyped.add(i);
+      }
     }
   }
 }
@@ -672,7 +704,7 @@ function displayPrediction(s){ return s; }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 function selectPrediction(i){
-  const p=currentPredictions[i]; if(!p || mode==='efficiency' || (mode==='test' && metrics.completed))return;
+  const p=currentPredictions[i]; if(!p || mode==='efficiency' || metrics.paused || (mode==='test' && metrics.completed))return;
   if(mode==='test') markPredictionSelection(p);
   startTimer();
   const before=els.compose.value;
@@ -684,9 +716,43 @@ function selectPrediction(i){
   afterCompositionAction(true);
 }
 
-function startTimer(){ if(!metrics.start){metrics.start=performance.now(); els.timerState.textContent='running';} }
-function elapsedMs(){ if(!metrics.start)return 0; return (metrics.end||performance.now())-metrics.start; }
-function stopTimer(){ if(metrics.start && !metrics.end)metrics.end=performance.now(); els.timerState.textContent=metrics.completed?'complete':'stopped'; }
+function startTimer(){
+  if(!metrics.start){metrics.start=performance.now(); els.timerState.textContent='running';}
+}
+function elapsedMs(){
+  if(!metrics.start)return 0;
+  const now = metrics.end || (metrics.paused ? metrics.pauseStarted : performance.now());
+  return Math.max(0, now - metrics.start - (metrics.totalPaused||0));
+}
+function stopTimer(){
+  if(metrics.start && !metrics.end){
+    if(metrics.paused && metrics.pauseStarted){
+      metrics.totalPaused += performance.now()-metrics.pauseStarted;
+      metrics.pauseStarted=0; metrics.paused=false;
+    }
+    metrics.end=performance.now();
+  }
+  els.timerState.textContent=metrics.completed?'finished':'stopped';
+}
+function togglePause(){
+  if(mode==='efficiency' || metrics.completed) return;
+  if(!metrics.start) startTimer();
+  if(!metrics.paused){
+    metrics.paused=true;
+    metrics.pauseStarted=performance.now();
+    els.timerState.textContent='paused';
+    els.compositionStatus.textContent='Paused · press \\ to resume';
+    els.compositionStatus.classList.add('good');
+  } else {
+    const now=performance.now();
+    if(metrics.pauseStarted) metrics.totalPaused += now-metrics.pauseStarted;
+    metrics.pauseStarted=0; metrics.paused=false;
+    els.timerState.textContent='running';
+    els.compositionStatus.textContent='Type with the physical keyboard';
+    els.compositionStatus.classList.remove('good');
+  }
+  updateMetrics();
+}
 
 function updateMetrics(){
   const text=els.compose.value; const chars=text.length; const acts=metrics.keys+metrics.predSelections;
@@ -701,11 +767,15 @@ function updateMetrics(){
   const misses=metrics.targetWordMisses.size;
   const missPct=evaluated ? (misses/evaluated*100) : 0;
   const availableEvaluated=[...metrics.targetWordsEvaluated].filter(i=>metrics.targetWordSeen.has(i)).length;
+  const predAfterTyping=metrics.targetWordsPredictedAfterTyping.size;
+  const predAfterTypingPct=availableEvaluated ? (predAfterTyping/availableEvaluated*100) : 0;
   const predTyped=metrics.targetWordsPredictedButTyped.size;
   const nonUsePct=availableEvaluated ? (predTyped/availableEvaluated*100) : 0;
   els.mMisses.textContent=String(misses);
   els.mMissRate.textContent=`${missPct.toFixed(1)}%`;
   els.mEvaluated.textContent=String(evaluated);
+  els.mPredAfterTyping.textContent=String(predAfterTyping);
+  els.mPredAfterTypingRate.textContent=`${predAfterTypingPct.toFixed(1)}%`;
   els.mPredTyped.textContent=String(predTyped);
   els.mNonUseRate.textContent=`${nonUsePct.toFixed(1)}%`;
   if(mode==='test' && currentTarget){
@@ -717,25 +787,32 @@ function updateMetrics(){
 }
 
 function afterCompositionAction(countOpportunity){
-  renderTarget(); checkComplete(); renderPredictions(countOpportunity && !metrics.completed); updateMetrics();
+  renderTarget(); renderPredictions(countOpportunity && !metrics.completed); updateMetrics();
 }
 
-function checkComplete(){
-  if(mode!=='test'||!currentTarget||metrics.completed)return;
-  if(normalizeText(els.compose.value)===currentTarget){
-    metrics.completed=true; stopTimer();
-    els.compose.readOnly=true;
-    els.compositionStatus.textContent='Target complete · statistics frozen'; els.compositionStatus.classList.add('good');
-    const chars=els.compose.value.length, acts=metrics.keys+metrics.predSelections, ksr=chars?((chars-acts)/chars*100):0, mins=elapsedMs()/60000, wpm=mins>0?(chars/5)/mins:0;
-    markCompletedTargetWords();
-    const evaluated=metrics.targetWordsEvaluated.size, misses=metrics.targetWordMisses.size;
-    const missPct=evaluated ? misses/evaluated*100 : 0;
-    const availableEvaluated=[...metrics.targetWordsEvaluated].filter(i=>metrics.targetWordSeen.has(i)).length;
-    const predTyped=metrics.targetWordsPredictedButTyped.size;
-    const nonUsePct=availableEvaluated ? predTyped/availableEvaluated*100 : 0;
-    trialHistory.unshift({target:currentTarget,acts,preds:metrics.predSelections,ksr,wpm,avail:`${metrics.targetAvailable}/${metrics.decisionPoints}`,misses:`${misses} (${missPct.toFixed(1)}%)`,predTyped:`${predTyped} (${nonUsePct.toFixed(1)}%)`});
-    renderHistory();
-  }
+function finishTestTrial(){
+  if(mode!=='test' || !currentTarget || metrics.completed) return;
+  // Completion is participant-declared. The final response is preserved exactly as typed,
+  // including omissions, substitutions, spelling errors, and punctuation errors.
+  metrics.completed=true;
+  stopTimer();
+  els.compose.readOnly=true;
+  els.compositionStatus.textContent='Trial finished · statistics frozen';
+  els.compositionStatus.classList.add('good');
+  renderPredictions(false);
+  markCompletedTargetWords();
+  updateMetrics();
+  const chars=els.compose.value.length, acts=metrics.keys+metrics.predSelections;
+  const ksr=chars?((chars-acts)/chars*100):0, mins=elapsedMs()/60000, wpm=mins>0?(chars/5)/mins:0;
+  const evaluated=metrics.targetWordsEvaluated.size, misses=metrics.targetWordMisses.size;
+  const missPct=evaluated ? misses/evaluated*100 : 0;
+  const availableEvaluated=[...metrics.targetWordsEvaluated].filter(i=>metrics.targetWordSeen.has(i)).length;
+  const predAfterTyping=metrics.targetWordsPredictedAfterTyping.size;
+  const predAfterTypingPct=availableEvaluated ? predAfterTyping/availableEvaluated*100 : 0;
+  const predTyped=metrics.targetWordsPredictedButTyped.size;
+  const nonUsePct=availableEvaluated ? predTyped/availableEvaluated*100 : 0;
+  trialHistory.unshift({target:currentTarget,acts,preds:metrics.predSelections,ksr,wpm,avail:`${metrics.targetAvailable}/${metrics.decisionPoints}`,misses:`${misses} (${missPct.toFixed(1)}%)`,predAfterTyping:`${predAfterTyping} (${predAfterTypingPct.toFixed(1)}%)`,predTyped:`${predTyped} (${nonUsePct.toFixed(1)}%)`});
+  renderHistory();
 }
 
 function updateLiveTargetVisibility(){
@@ -776,7 +853,7 @@ function renderTarget(){
   const typed=normalizeText(els.compose.value); let i=0; while(i<typed.length&&i<currentTarget.length&&typed[i].toLowerCase()===currentTarget[i].toLowerCase())i++;
   const done=currentTarget.slice(0,i), next=currentTarget.slice(i,i+1), rest=currentTarget.slice(i+1);
   els.targetDisplay.innerHTML=`<span class="done">${escapeHtml(done)}</span><span class="next">${escapeHtml(next)}</span><span class="rest">${escapeHtml(rest)}</span>`;
-  els.targetStatus.textContent=metrics.completed?'complete':`${i}/${currentTarget.length} characters matched`;
+  els.targetStatus.textContent=metrics.completed?'trial finished':`${i}/${currentTarget.length} characters matched`;
 }
 
 function setTarget(index){
@@ -836,8 +913,8 @@ function updateContextReadout(){
 function updateModelBadge(){ if(!model)return; els.modelBadge.textContent=`${model.vocab.length.toLocaleString()} words · ${model.tokenCount.toLocaleString()} tokens`; }
 
 function renderHistory(){
-  if(!trialHistory.length){els.trialRows.innerHTML='<tr><td colspan="8" style="text-align:center;color:#7b8792">No completed trials yet.</td></tr>';return;}
-  els.trialRows.innerHTML=trialHistory.map(r=>`<tr><td title="${escapeHtml(r.target)}">${escapeHtml(r.target.slice(0,34))}${r.target.length>34?'…':''}</td><td>${r.acts}</td><td>${r.preds}</td><td>${r.ksr.toFixed(1)}%</td><td>${r.wpm.toFixed(1)}</td><td>${r.avail}</td><td>${r.misses||'–'}</td><td>${r.predTyped||'–'}</td></tr>`).join('');
+  if(!trialHistory.length){els.trialRows.innerHTML='<tr><td colspan="9" style="text-align:center;color:#7b8792">No completed trials yet.</td></tr>';return;}
+  els.trialRows.innerHTML=trialHistory.map(r=>`<tr><td title="${escapeHtml(r.target)}">${escapeHtml(r.target.slice(0,34))}${r.target.length>34?'…':''}</td><td>${r.acts}</td><td>${r.preds}</td><td>${r.ksr.toFixed(1)}%</td><td>${r.wpm.toFixed(1)}</td><td>${r.avail}</td><td>${r.misses||'–'}</td><td>${r.predAfterTyping||'–'}</td><td>${r.predTyped||'–'}</td></tr>`).join('');
 }
 
 function runEfficiency(){
@@ -914,7 +991,14 @@ function initAccordion(){
 function settingChanged(){ els.predCountVal.textContent=els.predCount.value; renderPredictions(false); if(mode==='efficiency')els.effResults.classList.add('hidden'); }
 
 els.compose.addEventListener('keydown',e=>{
+  // Backslash is a dedicated pause/resume control and is never inserted into the message.
+  if(!e.ctrlKey && !e.metaKey && !e.altKey && e.code==='Backslash'){
+    e.preventDefault();
+    togglePause();
+    return;
+  }
   if(mode==='test' && metrics.completed){e.preventDefault();return;}
+  if(metrics.paused){ e.preventDefault(); return; }
   // Top-row number keys select predictions: 1–9 = predictions 1–9; 0 = prediction 10.
   // Using e.code limits the shortcut to the physical number row rather than the numeric keypad.
   if(!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && /^Digit[0-9]$/.test(e.code)){
@@ -939,6 +1023,7 @@ els.liveTargetToggle.addEventListener('change',updateLiveTargetVisibility);
 els.testHistoryToggle.addEventListener('change',updateTestHistoryVisibility);
 els.newTarget.addEventListener('click',()=>setTarget(targetIndex+1));
 els.restartTrial.addEventListener('click',()=>resetComposition(false));
+els.finishTrial.addEventListener('click',finishTestTrial);
 els.resetAll.addEventListener('click',()=>resetComposition(mode==='practice'));
 els.runEfficiency.addEventListener('click',runEfficiency);
 els.effTarget.addEventListener('input',()=>els.effResults.classList.add('hidden'));
@@ -950,7 +1035,7 @@ els.trainBtn.addEventListener('click',()=>{
 els.restoreModel.addEventListener('click',()=>{customCorpus='';buildModel('');els.trainingText.value='';els.trainStatus.textContent='Built-in model restored.';renderPredictions(false);});
 
 // Keep WPM live while a trial is running.
-timerTick=setInterval(()=>{if(metrics&&metrics.start&&!metrics.end)updateMetrics();},250);
+timerTick=setInterval(()=>{if(metrics&&metrics.start&&!metrics.end&&!metrics.paused)updateMetrics();},250);
 window.addEventListener('resize',()=>requestAnimationFrame(positionPredictionDock));
 
 buildModel(''); metrics=freshMetrics(); initAccordion(); renderPredictions(false); updateMetrics(); updateLiveTargetVisibility(); updateTestHistoryVisibility(); positionPredictionDock(); els.compose.focus();
