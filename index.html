@@ -104,7 +104,7 @@
 <div class="app">
 <div class="topbar">
 <div class="brand">
-<div class="inline"><h1>Word Predictor Simulator</h1><span class="version">v0.19 · local model</span></div>
+<div class="inline"><h1>Word Predictor Simulator</h1><span class="version">v0.20 · local model</span></div>
 <p>Physical QWERTY input · context-sensitive word and phrase prediction</p>
 </div>
 <button class="btn danger" id="resetAll" title="Reset the current composition, timing, predictions, and performance measures for the current mode.">Reset</button>
@@ -128,8 +128,10 @@
 <button class="btn" id="uploadTarget" title="Load a plain-text .txt or .md file into the Target passage box and use it as the test target.">Upload text</button>
 <button class="btn" id="newTarget" title="Load a built-in sample passage as the Test-mode target.">Sample target</button>
 <button class="btn" id="restartTrial" title="Reset the current Test trial to zero while keeping the same target passage. Timing will begin with the first composition action.">Restart trial</button>
-<button class="btn primary" id="finishTrial" title="End the Test trial as typed, even if errors remain. Timing, WPM, and live statistics will freeze and the result will be recorded.">Finish trial</button>
+<button class="btn primary" id="finishTrial" title="Finish the Test trial, freeze statistics, record the result, and copy all labeled Live Performance measures to the clipboard.">Finish trial</button>
+<button class="btn" id="copyTrialStats" disabled title="Copy the last finished trial’s labeled statistics again, in two-column format for Excel or Google Sheets.">Copy statistics again</button>
 </div>
+<div class="status" id="clipboardStatus" role="status" aria-live="polite" style="margin-top:7px">Finish a trial to copy its labeled statistics.</div>
 <div class="status" id="targetLoadStatus" style="margin-top:7px" title="Shows instructions or confirmation after a target passage is pasted, uploaded, or applied.">Paste a passage above or upload a plain-text file, then use it as the test target.</div>
 <div class="targetPreviewRow">
 <div class="targetPreviewLabel">Test display</div>
@@ -363,7 +365,7 @@ const els = {
   keyDelay:$('keyDelay'), predDelay:$('predDelay'), contextReadout:$('contextReadout'), modelBadge:$('modelBadge'),
   targetPanel:$('targetPanel'), targetDisplay:$('targetDisplay'), targetStatus:$('targetStatus'), targetHeading:$('targetHeading'), liveTargetToggle:$('liveTargetToggle'), testHistoryToggle:$('testHistoryToggle'),
   testTargetEditorWrap:$('testTargetEditorWrap'), targetEditor:$('targetEditor'), targetFile:$('targetFile'), targetLoadStatus:$('targetLoadStatus'),
-  testActions:$('testActions'), applyTarget:$('applyTarget'), uploadTarget:$('uploadTarget'), newTarget:$('newTarget'), restartTrial:$('restartTrial'), finishTrial:$('finishTrial'), effTargetWrap:$('effTargetWrap'), effTarget:$('effTarget'),
+  testActions:$('testActions'), applyTarget:$('applyTarget'), uploadTarget:$('uploadTarget'), newTarget:$('newTarget'), restartTrial:$('restartTrial'), finishTrial:$('finishTrial'), copyTrialStats:$('copyTrialStats'), clipboardStatus:$('clipboardStatus'), effTargetWrap:$('effTargetWrap'), effTarget:$('effTarget'),
   composePanel:$('composePanel'), predictPanel:$('predictPanel'), effPanel:$('effPanel'), trialPanel:$('trialPanel'),
   runEfficiency:$('runEfficiency'), effStatus:$('effStatus'), effResults:$('effResults'), effActions:$('effActions'),
   eBaseline:$('eBaseline'), eOptimal:$('eOptimal'), eKsr:$('eKsr'), eWordPred:$('eWordPred'), eTime:$('eTime'),
@@ -382,6 +384,7 @@ let currentPredictions=[];
 let suppressInputCount=false;
 let metrics;
 let timerTick=null;
+let lastFinishedStatsText='';
 
 function freshMetrics(){
   return {
@@ -786,6 +789,65 @@ function updateMetrics(){
   } else { els.progressFill.style.width='0%'; els.mProgress.textContent='–'; }
 }
 
+
+// Assemble the complete Live Performance panel as labeled, tab-separated rows.
+// The snapshot is taken only after Finish trial freezes the statistics.
+function buildLabeledTrialStatistics(){
+  const safe = value => String(value == null ? '' : value).replace(/[\t\r\n]+/g, ' ').trim();
+  const rows = [
+    ['Statistic', 'Value'],
+    ['Trial status', 'Finished'],
+    ['Completed at (local)', new Date().toLocaleString()],
+    ['Target passage', currentTarget],
+    ['Composed message', els.compose.value],
+    ['Prediction window size', els.predCount.value],
+    ['Characters before completion', els.minPrefix.value],
+    ['Next-word prediction', els.nextWordToggle.checked ? 'On' : 'Off'],
+    ['Phrase prediction', els.phraseToggle.checked ? 'On' : 'Off'],
+    ['Vocabulary scope', els.modelSize.selectedOptions[0]?.textContent || els.modelSize.value]
+  ];
+  // Read labels directly from the panel so the clipboard and display agree.
+  const performancePanel = document.querySelector('[data-accordion="performance"]');
+  performancePanel.querySelectorAll('.metric').forEach(metric => {
+    const label = metric.querySelector('.l');
+    const value = metric.querySelector('.v');
+    if(label && value) rows.push([label.textContent, value.textContent]);
+  });
+  return rows.map(([label,value]) => safe(label) + '\t' + safe(value)).join('\n');
+}
+
+function showClipboardStatus(message, succeeded){
+  els.clipboardStatus.textContent = message;
+  els.clipboardStatus.classList.toggle('good', Boolean(succeeded));
+}
+async function copyFinishedTrialStatistics(){
+  if(!lastFinishedStatsText) return;
+  let copied = false;
+  if(navigator.clipboard && typeof navigator.clipboard.writeText === 'function'){
+    try{
+      await navigator.clipboard.writeText(lastFinishedStatsText);
+      copied = true;
+    }catch(err){ /* Try conventional copy fallback. */ }
+  }
+  if(!copied){
+    // Supports browsers that do not expose the asynchronous Clipboard API.
+    const temp = document.createElement('textarea');
+    temp.value = lastFinishedStatsText;
+    temp.setAttribute('readonly','');
+    temp.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(temp);
+    const originalFocus = document.activeElement;
+    temp.focus(); temp.select();
+    try{ copied = Boolean(document.execCommand && document.execCommand('copy')); }
+    catch(err){ copied = false; }
+    temp.remove();
+    if(originalFocus && typeof originalFocus.focus === 'function') originalFocus.focus();
+  }
+  showClipboardStatus(copied
+    ? 'Labeled trial statistics copied. Paste into Excel or Google Sheets (Statistic / Value columns).'
+    : 'Automatic copy was blocked by the browser. Click “Copy statistics again” or change clipboard permissions.', copied);
+}
+
 function afterCompositionAction(countOpportunity){
   renderTarget(); renderPredictions(countOpportunity && !metrics.completed); updateMetrics();
 }
@@ -813,6 +875,10 @@ function finishTestTrial(){
   const nonUsePct=availableEvaluated ? predTyped/availableEvaluated*100 : 0;
   trialHistory.unshift({target:currentTarget,acts,preds:metrics.predSelections,ksr,wpm,avail:`${metrics.targetAvailable}/${metrics.decisionPoints}`,misses:`${misses} (${missPct.toFixed(1)}%)`,predAfterTyping:`${predAfterTyping} (${predAfterTypingPct.toFixed(1)}%)`,predTyped:`${predTyped} (${nonUsePct.toFixed(1)}%)`});
   renderHistory();
+  lastFinishedStatsText = buildLabeledTrialStatistics();
+  els.copyTrialStats.disabled = false;
+  // Copy from the Finish trial click gesture without changing the trial result.
+  void copyFinishedTrialStatistics();
 }
 
 function updateLiveTargetVisibility(){
@@ -889,6 +955,9 @@ function loadTargetFile(file){
 }
 
 function resetComposition(clearTarget=false){
+  lastFinishedStatsText='';
+  els.copyTrialStats.disabled=true;
+  showClipboardStatus('Finish a trial to copy its labeled statistics.', false);
   metrics=freshMetrics(); els.compose.readOnly=false; els.compose.value=''; els.timerState.textContent='not started'; els.compositionStatus.textContent='Type with the physical keyboard'; els.compositionStatus.classList.remove('good');
   if(clearTarget)currentTarget=''; renderPredictions(false); renderTarget(); updateMetrics(); els.compose.focus();
 }
@@ -1024,6 +1093,7 @@ els.testHistoryToggle.addEventListener('change',updateTestHistoryVisibility);
 els.newTarget.addEventListener('click',()=>setTarget(targetIndex+1));
 els.restartTrial.addEventListener('click',()=>resetComposition(false));
 els.finishTrial.addEventListener('click',finishTestTrial);
+els.copyTrialStats.addEventListener('click',()=>{ void copyFinishedTrialStatistics(); });
 els.resetAll.addEventListener('click',()=>resetComposition(mode==='practice'));
 els.runEfficiency.addEventListener('click',runEfficiency);
 els.effTarget.addEventListener('input',()=>els.effResults.classList.add('hidden'));
